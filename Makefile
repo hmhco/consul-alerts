@@ -1,6 +1,6 @@
 APP_NAME = consul-alerts
-VERSION = latest
-BUILD_ARCHS=linux-386 linux-amd64 darwin-amd64 freebsd-amd64
+VERSION ?= latest
+BUILD_ARCHS ?= linux-386 linux-amd64 darwin-amd64 freebsd-amd64
 
 all: clean build
 
@@ -28,7 +28,7 @@ build: test
 	@echo "--> Building local application"
 	@go build -o build/bin/`uname -s`-`uname -p`/${VERSION}/${APP_NAME} -v .
 
-build-all: test
+build-all: prepare
 	@echo "--> Building all application"
 	@for arch in ${BUILD_ARCHS}; do \
 		echo "... $${arch}"; \
@@ -43,19 +43,3 @@ package: build-all
 		tar cf build/tar/${APP_NAME}-${VERSION}-$${arch}.tar -C build/bin/$${arch}/${VERSION} ${APP_NAME} ; \
 	done
 
-release: package
-ifeq ($(VERSION) , latest)
-	@echo "--> Removing Latest Version"
-	@curl -s -X DELETE -u ${ACCESS_KEY} https://api.bintray.com/packages/darkcrux/generic/${APP_NAME}/versions/${VERSION}
-	@echo
-endif
-	@echo "--> Releasing version: ${VERSION}"
-	@for arch in ${BUILD_ARCHS}; do \
-		curl -s -T "build/tar/${APP_NAME}-${VERSION}-$${arch}.tar" -u "${ACCESS_KEY}" "https://api.bintray.com/content/darkcrux/generic/${APP_NAME}/${VERSION}/${APP_NAME}-${VERSION}-$${arch}.tar"; \
-		echo "... $${arch}"; \
-	done
-	@echo "--> Publishing version ${VERSION}"
-	@curl -s -X POST -u ${ACCESS_KEY} https://api.bintray.com/content/darkcrux/generic/${APP_NAME}/${VERSION}/publish
-	@echo
-	@echo "Github Release"
-	@gh-release create AcalephStorage/consul-alerts ${VERSION}
